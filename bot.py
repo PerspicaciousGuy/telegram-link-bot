@@ -240,6 +240,53 @@ async def unblacklist_command(client, message):
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
 
+@app.on_message(filters.command("list") & filters.group)
+async def list_command(client, message):
+    # Check Admin
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
+        return
+
+    try:
+        blacklist = await db.get_blacklist()
+        whitelist_domains = await db.get_whitelist_domains()
+        whitelist_users = await db.get_whitelist_users()
+
+        text = "📋 **Bot Configuration**\n\n"
+        
+        text += "🚫 **Blacklisted Words:**\n"
+        if blacklist:
+            text += ", ".join([f"`{w}`" for w in blacklist])
+        else:
+            text += "_None_"
+        text += "\n\n"
+
+        text += "✅ **Whitelisted Domains:**\n"
+        if whitelist_domains:
+            text += ", ".join([f"`{d}`" for d in whitelist_domains])
+        else:
+            text += "_None_"
+        text += "\n\n"
+
+        text += "👤 **Whitelisted Users:**\n"
+        if whitelist_users:
+            text += f"{len(whitelist_users)} users (IDs hidden for privacy)"
+        else:
+            text += "_None_"
+
+        msg = await message.reply(text)
+        asyncio.create_task(scheduled_delete(msg, delay=60)) # Delete after 60s
+        
+    except Exception as e:
+        await message.reply(f"❌ **Database Error:** {e}")
+
 @app.on_message(filters.group & (filters.text | filters.caption))
 async def message_handler(client, message):
     chat_id = message.chat.id

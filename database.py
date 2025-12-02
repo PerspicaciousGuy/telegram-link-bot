@@ -86,6 +86,16 @@ class Database:
             return False
         return user_id in doc["list"]
 
+    async def get_whitelist_domains(self):
+        if self.db is None: return []
+        doc = await self.whitelist.find_one({"type": "domain"})
+        return doc["list"] if doc and "list" in doc else []
+
+    async def get_whitelist_users(self):
+        if self.db is None: return []
+        doc = await self.whitelist.find_one({"type": "user"})
+        return doc["list"] if doc and "list" in doc else []
+
     # --- Blacklist ---
     async def add_blacklist_word(self, word):
         if self.db is None: return
