@@ -8,12 +8,20 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - **Warning System**: Warns users when they post a link. Mutes them for 24 hours after 3 warnings.
 - **Logging**: Forwards deleted messages to a private log channel.
 - **Admin Commands**: Manage whitelist and warnings easily.
-- **MongoDB Support**: Persist warnings and settings in the cloud.
+- **Keyword Blacklist**: Automatically delete messages containing banned words.
+- **Auto-Delete**: Bot messages (warnings, confirmations) auto-delete after 5 minutes to keep chat clean.
+- **Anonymous Admin Support**: Works perfectly with "Group Manager" (Anonymous Admins).
+- **MongoDB Support**: Persist warnings, whitelist, and blacklist in the cloud.
 
 ## 🛠 Commands
 - `/start` - (PM Only) Check if the bot is alive and see developer info.
 - `/whitelist <domain>` - (Admin Only) Allow a specific domain (e.g., `/whitelist youtube.com`).
 - `/whitelist` (Reply) - (Admin Only) Allow a specific user to post any link.
+- `/unlist <domain>` - (Admin Only) Remove a domain from the whitelist.
+- `/unlist` (Reply) - (Admin Only) Remove a user from the whitelist.
+- `/blacklist <word>` - (Admin Only) Ban a specific word. Messages with this word will be deleted.
+- `/unblacklist <word>` - (Admin Only) Unban a word.
+- `/list` - (Admin Only) View all whitelisted domains/users and blacklisted words.
 - `/unwarn` (Reply) - (Admin Only) Reset warnings for a user **AND** automatically unmute them.
 - **Unmute Button** - (Admin Only) Click the button on the "Muted" message to instantly unmute the user.
 
