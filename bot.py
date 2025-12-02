@@ -7,6 +7,11 @@ from pyrogram import Client, filters, types, enums
 from threading import Thread
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from database import Database
+import time
+
+# Cache for member checks: (chat_id, username) -> (is_member, timestamp)
+member_cache = {}
+CACHE_DURATION = 600 # 10 minutes
 
 
 # Telegram bot credentials
@@ -360,19 +365,96 @@ async def message_handler(client, message):
             except Exception as e:
                 print(f"Failed to delete blacklisted message: {e}")
 
-    # 4. Detect Links
+    # 4. Detect Links & Mentions
     entities = message.entities or message.caption_entities or []
     has_link = False
-    
+    mentions = []
+
     # Check regex
     if url_pattern.search(text):
         has_link = True
     
-    # Check entities (Text Links)
+    # Check entities
     for entity in entities:
         if entity.type in [enums.MessageEntityType.URL, enums.MessageEntityType.TEXT_LINK]:
             has_link = True
-            break
+        elif entity.type == enums.MessageEntityType.MENTION:
+            # Extract username (remove @)
+            username = text[entity.offset:entity.offset+entity.length].strip("@")
+            mentions.append(username)
+
+    # --- Max Mentions Limit ---
+    if len(mentions) > 5:
+        try:
+            await message.delete()
+            msg = await message.reply(f"🚫 {message.from_user.mention}, too many mentions! (Max 5)")
+            asyncio.create_task(scheduled_delete(msg, delay=60))
+            return
+        except Exception:
+            pass
+
+    # --- Smart Mention Filter ---
+    for username in mentions:
+        # Ignore whitelist keywords
+        if username.lower() in ["everyone", "all", "admin", "admins"]:
+            continue
+            
+        # Check Cache
+        cache_key = (chat_id, username)
+        is_member = False
+        
+        if cache_key in member_cache:
+            cached_status, timestamp = member_cache[cache_key]
+            if time.time() - timestamp < CACHE_DURATION:
+                is_member = cached_status
+            else:
+                # Expired
+                del member_cache[cache_key]
+        
+        # If not in cache, check API
+        if cache_key not in member_cache:
+            try:
+                # Try to get member
+                await client.get_chat_member(chat_id, username)
+                is_member = True
+            except Exception:
+                # User not found or not in chat
+                is_member = False
+            
+            # Update Cache
+            member_cache[cache_key] = (is_member, time.time())
+
+        # If NOT a member -> SPAM
+        if not is_member:
+            try:
+                await message.delete()
+                msg = await message.reply(f"🚫 {message.from_user.mention}, mentioning external channels/users is not allowed!")
+                asyncio.create_task(scheduled_delete(msg, delay=60))
+                
+                # Warn User
+                warnings = await db.add_warning(user_id)
+                limit = 3
+                if warnings >= limit:
+                     # Punish (Mute)
+                    try:
+                        until_date = datetime.now() + timedelta(hours=24)
+                        await client.restrict_chat_member(
+                            chat_id, 
+                            user_id, 
+                            types.ChatPermissions(can_send_messages=False),
+                            until_date=until_date
+                        )
+                        button = types.InlineKeyboardMarkup([
+                            [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
+                        ])
+                        await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to spam.", reply_markup=button)
+                        await db.reset_warnings(user_id)
+                    except Exception:
+                        pass
+                return # Stop processing
+            except Exception as e:
+                print(f"Failed to handle mention spam: {e}")
+            return
 
     if not has_link:
         return
