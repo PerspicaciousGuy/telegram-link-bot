@@ -287,6 +287,30 @@ async def list_command(client, message):
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
 
+@app.on_message(filters.command("testlog") & filters.group)
+async def testlog_command(client, message):
+    # Check Admin
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
+        return
+
+    if log_channel_id == 0:
+        await message.reply("❌ **Log Channel ID is not set!**\nPlease check your environment variables.")
+        return
+
+    try:
+        sent = await client.send_message(log_channel_id, "✅ **Test Log**\nThis is a test message to verify the log channel connection.")
+        await message.reply(f"✅ **Success!**\nTest message sent to channel. Message ID: `{sent.id}`")
+    except Exception as e:
+        await message.reply(f"❌ **Failed to send log:**\n`{e}`\n\n**Possible fixes:**\n1. Make sure the Bot is an **Admin** in the channel.\n2. Check if the Channel ID is correct (it should start with -100).")
+
 @app.on_message(filters.group & (filters.text | filters.caption))
 async def message_handler(client, message):
     chat_id = message.chat.id
