@@ -21,7 +21,7 @@ url_pattern = re.compile(r"(https?://\S+|www\.\S+)")
 def is_admin(chat_member):
     return chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
 
-@app.on_message(filters.command("start"))
+@app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     text = (
         "👋 **Hello! I am the Link Remover Bot.**\n\n"
