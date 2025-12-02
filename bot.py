@@ -55,11 +55,14 @@ async def log_action(client, action, details, message=None):
         # Warn if Log Channel ID is not set but we tried to log
         pass
 
-async def delete_previous_warnings(client, chat_id, user_id):
+async def delete_previous_warnings(client, chat_id, user_id, exclude_id=None):
     try:
         msg_ids = await db.get_warning_message_ids(user_id)
         if msg_ids:
-            await client.delete_messages(chat_id, msg_ids)
+            if exclude_id:
+                msg_ids = [mid for mid in msg_ids if mid != exclude_id]
+            if msg_ids:
+                await client.delete_messages(chat_id, msg_ids)
     except Exception:
         pass
 
@@ -384,7 +387,7 @@ async def message_handler(client, message):
                 if warnings >= limit:
                     # Punish
                     try:
-                        await delete_previous_warnings(client, chat_id, user_id)
+                        await delete_previous_warnings(client, chat_id, user_id, exclude_id=msg.id)
                         until_date = datetime.now() + timedelta(hours=24)
                         await client.restrict_chat_member(
                             chat_id, 
@@ -397,8 +400,10 @@ async def message_handler(client, message):
                         ])
                         await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to using banned words.", reply_markup=button)
                         await db.reset_warnings(user_id)
+                        asyncio.create_task(scheduled_delete(msg, delay=120))
                     except Exception as e:
                         await msg.edit_text(f"⚠️ {message.from_user.mention}, stop using banned words! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+                        asyncio.create_task(scheduled_delete(msg, delay=120))
                 else:
                     await msg.edit_text(f"⚠️ {message.from_user.mention}, that word is not allowed! (Warning {warnings}/{limit})")
                     asyncio.create_task(scheduled_delete(msg, delay=120))
@@ -479,7 +484,7 @@ async def message_handler(client, message):
                 if warnings >= limit:
                      # Punish (Mute)
                     try:
-                        await delete_previous_warnings(client, chat_id, user_id)
+                        await delete_previous_warnings(client, chat_id, user_id, exclude_id=msg.id)
                         until_date = datetime.now() + timedelta(hours=24)
                         await client.restrict_chat_member(
                             chat_id, 
@@ -492,6 +497,7 @@ async def message_handler(client, message):
                         ])
                         await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to spam.", reply_markup=button)
                         await db.reset_warnings(user_id)
+                        asyncio.create_task(scheduled_delete(msg, delay=120))
                     except Exception:
                         pass
                 else:
@@ -528,7 +534,7 @@ async def message_handler(client, message):
     if warnings >= limit:
         # Punish
         try:
-            await delete_previous_warnings(client, chat_id, user_id)
+            await delete_previous_warnings(client, chat_id, user_id, exclude_id=msg.id)
             # Mute for 24 hours
             until_date = datetime.now() + timedelta(hours=24)
             await client.restrict_chat_member(
@@ -545,8 +551,10 @@ async def message_handler(client, message):
             
             await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
             await db.reset_warnings(user_id)
+            asyncio.create_task(scheduled_delete(msg, delay=120))
         except Exception as e:
             await msg.edit_text(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+            asyncio.create_task(scheduled_delete(msg, delay=120))
     else:
         await msg.edit_text(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
         asyncio.create_task(scheduled_delete(msg, delay=120))
