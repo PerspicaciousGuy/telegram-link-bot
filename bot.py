@@ -400,7 +400,7 @@ async def message_handler(client, message):
                         ])
                         await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to using banned words.", reply_markup=button)
                         await db.reset_warnings(user_id)
-                        asyncio.create_task(scheduled_delete(msg, delay=120))
+                        # Mute message stays forever
                     except Exception as e:
                         await msg.edit_text(f"⚠️ {message.from_user.mention}, stop using banned words! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
                         asyncio.create_task(scheduled_delete(msg, delay=120))
@@ -497,7 +497,7 @@ async def message_handler(client, message):
                         ])
                         await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to spam.", reply_markup=button)
                         await db.reset_warnings(user_id)
-                        asyncio.create_task(scheduled_delete(msg, delay=120))
+                        # Mute message stays forever
                     except Exception:
                         pass
                 else:
@@ -551,7 +551,7 @@ async def message_handler(client, message):
             
             await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
             await db.reset_warnings(user_id)
-            asyncio.create_task(scheduled_delete(msg, delay=120))
+            # Mute message stays forever
         except Exception as e:
             await msg.edit_text(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
             asyncio.create_task(scheduled_delete(msg, delay=120))
@@ -593,7 +593,7 @@ async def unmute_callback(client, callback_query):
         # Update Message
         admin_name = callback_query.from_user.mention
         await callback_query.message.edit_text(f"✅ User unmuted by {admin_name}.\nWarnings have been reset.")
-        asyncio.create_task(scheduled_delete(callback_query.message, delay=300))
+        asyncio.create_task(scheduled_delete(callback_query.message, delay=120))
         await log_action(client, "User Unmuted", f"**Admin:** {admin_name}\n**User ID:** `{target_user_id}`", callback_query.message)
         
     except Exception as e:
