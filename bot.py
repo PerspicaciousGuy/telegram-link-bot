@@ -1,4 +1,5 @@
 import os
+print("SYSTEM: Bot script started execution...")
 import re
 import asyncio
 from datetime import datetime, timedelta
@@ -30,6 +31,11 @@ async def scheduled_delete(message, delay=300):
 
 def is_admin(chat_member):
     return chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+
+@app.on_message(filters.command("ping"))
+async def ping_command(client, message):
+    print(f"DEBUG: Ping received from {message.chat.id}")
+    await message.reply("Pong! 🏓\nI am alive.")
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
