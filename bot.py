@@ -146,14 +146,14 @@ async def whitelist_command(client, message):
     
     # If reply, whitelist user
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user.id
-        await db.add_whitelist_user(target_user)
-        await message.reply(f"User {target_user} whitelisted.")
+        target_user = message.reply_to_message.from_user
+        await db.add_whitelist_user(target_user.id)
+        await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
         return
 
     # Else whitelist domain
     await db.add_whitelist_domain(target)
-    await message.reply(f"Domain `{target}` whitelisted.")
+    await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
 
 @app.on_message(filters.command("unwarn") & filters.group)
 async def unwarn_command(client, message):
@@ -165,9 +165,31 @@ async def unwarn_command(client, message):
         await message.reply("Reply to a user to reset their warnings.")
         return
     
-    target_user = message.reply_to_message.from_user.id
-    await db.reset_warnings(target_user)
-    await message.reply(f"Warnings reset for {message.reply_to_message.from_user.mention}.")
+    target_user = message.reply_to_message.from_user
+    
+    # Reset warnings
+    await db.reset_warnings(target_user.id)
+    
+    # Also Unmute to ensure they can chat
+    try:
+        await client.restrict_chat_member(
+            message.chat.id,
+            target_user.id,
+            types.ChatPermissions(
+                can_send_messages=True,
+                can_send_media_messages=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_send_polls=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False
+            )
+        )
+    except Exception:
+        pass # If fails (e.g. user not muted), just ignore
+
+    await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
 
 @app.on_callback_query(filters.regex(r"^unmute_"))
 async def unmute_callback(client, callback_query):
