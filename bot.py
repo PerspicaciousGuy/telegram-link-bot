@@ -117,12 +117,10 @@ async def unlist_command(client, message):
     if not is_sender_admin:
         return
 
-    if len(message.command) < 2:
+    if not message.reply_to_message and len(message.command) < 2:
         await message.reply("Usage: `/unlist <domain>` or reply to a user to remove them from whitelist.")
         return
 
-    target = message.command[1]
-    
     # If reply, unlist user
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
@@ -133,6 +131,8 @@ async def unlist_command(client, message):
         except Exception as e:
             await message.reply(f"❌ **Database Error:** {e}")
         return
+
+    target = message.command[1]
 
     # Else unlist domain
     try:
