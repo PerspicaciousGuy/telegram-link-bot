@@ -16,12 +16,12 @@ class Database:
 
     # --- Warnings ---
     async def get_warnings(self, user_id):
-        if not self.db: return 0
+        if self.db is None: return 0
         user = await self.warnings.find_one({"user_id": user_id})
         return user["count"] if user else 0
 
     async def add_warning(self, user_id):
-        if not self.db: return 0
+        if self.db is None: return 0
         user = await self.warnings.find_one({"user_id": user_id})
         if user:
             new_count = user["count"] + 1
@@ -32,12 +32,12 @@ class Database:
             return 1
 
     async def reset_warnings(self, user_id):
-        if not self.db: return
+        if self.db is None: return
         await self.warnings.delete_one({"user_id": user_id})
 
     # --- Whitelist ---
     async def add_whitelist_domain(self, domain):
-        if not self.db: return
+        if self.db is None: return
         await self.whitelist.update_one(
             {"type": "domain"}, 
             {"$addToSet": {"list": domain}}, 
@@ -45,14 +45,14 @@ class Database:
         )
 
     async def remove_whitelist_domain(self, domain):
-        if not self.db: return
+        if self.db is None: return
         await self.whitelist.update_one(
             {"type": "domain"}, 
             {"$pull": {"list": domain}}
         )
 
     async def is_domain_whitelisted(self, text):
-        if not self.db: return False
+        if self.db is None: return False
         doc = await self.whitelist.find_one({"type": "domain"})
         if not doc or "list" not in doc:
             return False
@@ -63,7 +63,7 @@ class Database:
         return False
 
     async def add_whitelist_user(self, user_id):
-        if not self.db: return
+        if self.db is None: return
         await self.whitelist.update_one(
             {"type": "user"}, 
             {"$addToSet": {"list": user_id}}, 
@@ -71,14 +71,14 @@ class Database:
         )
 
     async def remove_whitelist_user(self, user_id):
-        if not self.db: return
+        if self.db is None: return
         await self.whitelist.update_one(
             {"type": "user"}, 
             {"$pull": {"list": user_id}}
         )
 
     async def is_user_whitelisted(self, user_id):
-        if not self.db: return False
+        if self.db is None: return False
         doc = await self.whitelist.find_one({"type": "user"})
         if not doc or "list" not in doc:
             return False
