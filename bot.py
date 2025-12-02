@@ -138,8 +138,16 @@ async def link_handler(client, message):
 
 @app.on_message(filters.command("whitelist") & filters.group)
 async def whitelist_command(client, message):
-    member = await client.get_chat_member(message.chat.id, message.from_user.id)
-    if not is_admin(member):
+    # Check Admin (Handle Anonymous Admin)
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
         return
 
     if len(message.command) < 2:
@@ -163,8 +171,16 @@ async def whitelist_command(client, message):
 
 @app.on_message(filters.command("unwarn") & filters.group)
 async def unwarn_command(client, message):
-    member = await client.get_chat_member(message.chat.id, message.from_user.id)
-    if not is_admin(member):
+    # Check Admin (Handle Anonymous Admin)
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
         return
 
     if not message.reply_to_message:
