@@ -6,7 +6,7 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - **Advanced Link Detection**: Detects links in text, media captions, and hidden text links (Markdown/HTML).
 - **Whitelist System**: Allow specific domains (e.g., `youtube.com`) or specific users to post links.
 - **Warning System**: Warns users when they post a link. Mutes them for 24 hours after 3 warnings.
-- **Logging**: Forwards deleted messages to a private log channel.
+- **Logging**: Forwards deleted messages and **all admin actions** (whitelist, blacklist, etc.) to a private log channel.
 - **Admin Commands**: Manage whitelist and warnings easily.
 - **Keyword Blacklist**: Automatically delete messages containing banned words.
 - **Auto-Delete**: Bot messages (warnings, confirmations) auto-delete after 5 minutes to keep chat clean.
