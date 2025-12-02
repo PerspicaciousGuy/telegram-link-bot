@@ -176,5 +176,20 @@ def run_server():
 # Start HTTP server in a separate thread
 Thread(target=run_server).start()
 
-print("Bot is running...")
-app.run()
+from pyrogram import idle
+
+async def main():
+    await app.start()
+    print("Bot is running...")
+    
+    if log_channel_id != 0:
+        try:
+            await app.send_message(log_channel_id, "✅ **Bot has restarted!**\nI am now online and protecting your groups.")
+        except Exception as e:
+            print(f"Failed to send restart log: {e}")
+
+    await idle()
+    await app.stop()
+
+if __name__ == "__main__":
+    app.run(main())
