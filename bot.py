@@ -21,6 +21,24 @@ url_pattern = re.compile(r"(https?://\S+|www\.\S+)")
 def is_admin(chat_member):
     return chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
 
+@app.on_message(filters.command("start"))
+async def start_command(client, message):
+    text = (
+        "👋 **Hello! I am the Link Remover Bot.**\n\n"
+        "I help keep your group clean by automatically deleting links sent by non-admins.\n\n"
+        "**My Features:**\n"
+        "🔹 Delete text links, media captions, and hidden links.\n"
+        "🔹 Whitelist specific domains or users.\n"
+        "🔹 Warn users and mute them after 3 strikes.\n"
+        "🔹 Log deleted messages to a channel.\n\n"
+        "Add me to your group and promote me to Admin!"
+    )
+    buttons = types.InlineKeyboardMarkup([
+        [types.InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/justinixx")],
+        [types.InlineKeyboardButton("📦 Source Code", url="https://github.com/PerspicaciousGuy/telegram-link-bot")]
+    ])
+    await message.reply(text, reply_markup=buttons, disable_web_page_preview=True)
+
 @app.on_message(filters.group & (filters.text | filters.caption))
 async def link_handler(client, message):
     chat_id = message.chat.id
