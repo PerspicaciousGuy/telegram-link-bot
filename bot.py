@@ -290,31 +290,7 @@ async def list_command(client, message):
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
 
-@app.on_message(filters.command("testlog") & filters.group)
-async def testlog_command(client, message):
-    # Check Admin
-    is_sender_admin = False
-    if not message.from_user:
-        if message.sender_chat and message.sender_chat.id == message.chat.id:
-            is_sender_admin = True
-    else:
-        member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        is_sender_admin = is_admin(member)
 
-    if not is_sender_admin:
-        return
-
-    if log_channel_id == 0:
-        await message.reply("❌ **Log Channel ID is not set!**\nPlease check your environment variables.")
-        return
-
-    try:
-        # Try to get chat info first (helps resolve/cache the peer)
-        chat = await client.get_chat(log_channel_id)
-        sent = await client.send_message(chat.id, f"✅ **Test Log**\nThis is a test message to verify the log channel connection.\n**Channel:** {chat.title}")
-        await message.reply(f"✅ **Success!**\nTest message sent to channel `{chat.title}`.\nMessage ID: `{sent.id}`")
-    except Exception as e:
-        await message.reply(f"❌ **Failed to send log:**\n`{e}`\n\n**Troubleshooting (ID Mode):**\n1. **Remove** the bot from the channel.\n2. **Add** it back as Admin.\n3. **Send a message** in the channel manually.\n4. Try `/testlog` again.")
 
 @app.on_message(filters.group & (filters.text | filters.caption))
 async def message_handler(client, message):
