@@ -32,7 +32,7 @@ db = Database()
 url_pattern = re.compile(r"(https?://\S+|www\.\S+)")
 
 # Helper for auto-deleting messages
-async def scheduled_delete(message, delay=300):
+async def scheduled_delete(message, delay=120):
     await asyncio.sleep(delay)
     try:
         await message.delete()
@@ -53,7 +53,14 @@ async def log_action(client, action, details, message=None):
                     pass
     elif message:
         # Warn if Log Channel ID is not set but we tried to log
-        # (Optional: might be annoying if they intentionally didn't set it, but good for debugging now)
+        pass
+
+async def delete_previous_warnings(client, chat_id, user_id):
+    try:
+        msg_ids = await db.get_warning_message_ids(user_id)
+        if msg_ids:
+            await client.delete_messages(chat_id, msg_ids)
+    except Exception:
         pass
 
 def is_admin(chat_member):
@@ -370,12 +377,14 @@ async def message_handler(client, message):
             try:
                 await message.delete()
                 # Warn User
-                warnings = await db.add_warning(user_id)
+                msg = await message.reply(f"⚠️ {message.from_user.mention}, that word is not allowed! (Warning checking...)")
+                warnings = await db.add_warning(user_id, msg.id)
                 limit = 3
                 
                 if warnings >= limit:
                     # Punish
                     try:
+                        await delete_previous_warnings(client, chat_id, user_id)
                         until_date = datetime.now() + timedelta(hours=24)
                         await client.restrict_chat_member(
                             chat_id, 
@@ -386,13 +395,13 @@ async def message_handler(client, message):
                         button = types.InlineKeyboardMarkup([
                             [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
                         ])
-                        await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to using banned words.", reply_markup=button)
+                        await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to using banned words.", reply_markup=button)
                         await db.reset_warnings(user_id)
                     except Exception as e:
-                        await message.reply(f"⚠️ {message.from_user.mention}, stop using banned words! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+                        await msg.edit_text(f"⚠️ {message.from_user.mention}, stop using banned words! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
                 else:
-                    msg = await message.reply(f"⚠️ {message.from_user.mention}, that word is not allowed! (Warning {warnings}/{limit})")
-                    asyncio.create_task(scheduled_delete(msg, delay=300))
+                    await msg.edit_text(f"⚠️ {message.from_user.mention}, that word is not allowed! (Warning {warnings}/{limit})")
+                    asyncio.create_task(scheduled_delete(msg, delay=120))
                 return # Stop processing if blacklisted word found
             except Exception as e:
                 print(f"Failed to delete blacklisted message: {e}")
@@ -464,11 +473,13 @@ async def message_handler(client, message):
                 asyncio.create_task(scheduled_delete(msg, delay=60))
                 
                 # Warn User
-                warnings = await db.add_warning(user_id)
+                msg = await message.reply(f"🚫 {message.from_user.mention}, mentioning external channels/users is not allowed!")
+                warnings = await db.add_warning(user_id, msg.id)
                 limit = 3
                 if warnings >= limit:
                      # Punish (Mute)
                     try:
+                        await delete_previous_warnings(client, chat_id, user_id)
                         until_date = datetime.now() + timedelta(hours=24)
                         await client.restrict_chat_member(
                             chat_id, 
@@ -479,10 +490,12 @@ async def message_handler(client, message):
                         button = types.InlineKeyboardMarkup([
                             [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
                         ])
-                        await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to spam.", reply_markup=button)
+                        await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to spam.", reply_markup=button)
                         await db.reset_warnings(user_id)
                     except Exception:
                         pass
+                else:
+                     asyncio.create_task(scheduled_delete(msg, delay=120))
                 return # Stop processing
             except Exception as e:
                 print(f"Failed to handle mention spam: {e}")
@@ -507,13 +520,15 @@ async def message_handler(client, message):
         log_text = f"**User:** {message.from_user.mention} (`{user_id}`)\n**Chat:** {message.chat.title}\n**Content:** {text[:1000]}"
         await log_action(client, "Link/Spam Deleted", log_text, message)
 
-    # Warn User (Same logic as above, could be refactored but keeping simple for now)
-    warnings = await db.add_warning(user_id)
+    # Warn User
+    msg = await message.reply(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning checking...)")
+    warnings = await db.add_warning(user_id, msg.id)
     limit = 3
     
     if warnings >= limit:
         # Punish
         try:
+            await delete_previous_warnings(client, chat_id, user_id)
             # Mute for 24 hours
             until_date = datetime.now() + timedelta(hours=24)
             await client.restrict_chat_member(
@@ -528,13 +543,13 @@ async def message_handler(client, message):
                 [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
             ])
             
-            await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
+            await msg.edit_text(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
             await db.reset_warnings(user_id)
         except Exception as e:
-            await message.reply(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+            await msg.edit_text(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
     else:
-        msg = await message.reply(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
-        asyncio.create_task(scheduled_delete(msg, delay=300))
+        await msg.edit_text(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
+        asyncio.create_task(scheduled_delete(msg, delay=120))
 
 @app.on_callback_query(filters.regex(r"^unmute_"))
 async def unmute_callback(client, callback_query):

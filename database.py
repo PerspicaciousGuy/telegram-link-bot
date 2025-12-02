@@ -22,16 +22,27 @@ class Database:
         user = await self.warnings.find_one({"user_id": user_id})
         return user["count"] if user else 0
 
-    async def add_warning(self, user_id):
+    async def add_warning(self, user_id, message_id=None):
         if self.db is None: return 0
         user = await self.warnings.find_one({"user_id": user_id})
         if user:
             new_count = user["count"] + 1
-            await self.warnings.update_one({"user_id": user_id}, {"$set": {"count": new_count}})
+            update_query = {"$set": {"count": new_count}}
+            if message_id:
+                update_query["$push"] = {"msg_ids": message_id}
+            await self.warnings.update_one({"user_id": user_id}, update_query)
             return new_count
         else:
-            await self.warnings.insert_one({"user_id": user_id, "count": 1})
+            doc = {"user_id": user_id, "count": 1}
+            if message_id:
+                doc["msg_ids"] = [message_id]
+            await self.warnings.insert_one(doc)
             return 1
+
+    async def get_warning_message_ids(self, user_id):
+        if self.db is None: return []
+        user = await self.warnings.find_one({"user_id": user_id})
+        return user.get("msg_ids", []) if user else []
 
     async def reset_warnings(self, user_id):
         if self.db is None: return
