@@ -18,7 +18,7 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - `/whitelist <domain>` - (Admin Only) Allow a specific domain (e.g., `/whitelist youtube.com`).
 - `/whitelist` (Reply) - (Admin Only) Allow a specific user to post any link.
 - `/unlist <domain>` - (Admin Only) Remove a domain from the whitelist.
-- `/unlist` (Reply) - (Admin Only) Remove a user from the whitelist.
+- `/unlistuser` (Reply) - (Admin Only) Remove a user from the whitelist.
 - `/blacklist <word>` - (Admin Only) Ban a specific word. Messages with this word will be deleted.
 - `/unblacklist <word>` - (Admin Only) Unban a word.
 - `/list` - (Admin Only) View all whitelisted domains/users and blacklisted words.

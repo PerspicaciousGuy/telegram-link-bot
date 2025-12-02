@@ -117,27 +117,42 @@ async def unlist_command(client, message):
     if not is_sender_admin:
         return
 
-    if not message.reply_to_message and len(message.command) < 2:
-        await message.reply("Usage: `/unlist <domain>` or reply to a user to remove them from whitelist.")
-        return
-
-    # If reply, unlist user
-    if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
-        try:
-            await db.remove_whitelist_user(target_user.id)
-            msg = await message.reply(f"✅ **User Unlisted!**\n{target_user.mention} has been removed from the whitelist.\nTheir links will now be deleted.")
-            asyncio.create_task(scheduled_delete(msg, delay=300))
-        except Exception as e:
-            await message.reply(f"❌ **Database Error:** {e}")
+    if len(message.command) < 2:
+        await message.reply("Usage: `/unlist <domain>` to remove a domain from whitelist.")
         return
 
     target = message.command[1]
 
-    # Else unlist domain
+    # Unlist domain
     try:
         await db.remove_whitelist_domain(target)
         msg = await message.reply(f"✅ **Domain Unlisted!**\nThe domain `{target}` has been removed from the whitelist.\nLinks containing this domain will now be deleted.")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
+    except Exception as e:
+        await message.reply(f"❌ **Database Error:** {e}")
+
+@app.on_message(filters.command("unlistuser") & filters.group)
+async def unlistuser_command(client, message):
+    # Check Admin
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
+        return
+
+    if not message.reply_to_message:
+        await message.reply("Usage: Reply to a user with `/unlistuser` to remove them from whitelist.")
+        return
+
+    target_user = message.reply_to_message.from_user
+    try:
+        await db.remove_whitelist_user(target_user.id)
+        msg = await message.reply(f"✅ **User Unlisted!**\n{target_user.mention} has been removed from the whitelist.\nTheir links will now be deleted.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
