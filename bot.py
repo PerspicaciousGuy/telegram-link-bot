@@ -7,6 +7,7 @@ from pyrogram import Client, filters, types, enums
 from threading import Thread
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from database import Database
+from deep_translator import GoogleTranslator
 import time
 
 # Cache for member checks: (chat_id, username) -> (is_member, timestamp)
@@ -358,6 +359,31 @@ async def list_command(client, message):
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
     await message.delete()
+
+@app.on_message(filters.command(["tr", "translate"]) & filters.group)
+async def translate_command(client, message):
+    if not message.reply_to_message:
+        await message.reply("Reply to a message to translate it.")
+        return
+
+    target_msg = message.reply_to_message
+    text = target_msg.text or target_msg.caption or ""
+    
+    if not text:
+        await message.reply("❌ No text found to translate.")
+        return
+
+    try:
+        # Translate to English
+        translated = GoogleTranslator(source='auto', target='en').translate(text)
+        
+        await message.reply(
+            f"🌍 **Translation (to English):**\n\n`{translated}`",
+            reply_to_message_id=target_msg.id
+        )
+        
+    except Exception as e:
+        await message.reply(f"❌ **Translation Failed:** {e}")
 
 
 
