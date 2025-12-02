@@ -39,13 +39,22 @@ async def scheduled_delete(message, delay=300):
     except Exception:
         pass
 
-async def log_action(client, action, details):
+async def log_action(client, action, details, message=None):
     if log_channel_id != 0:
         try:
             text = f"**{action}**\n{details}"
             await client.send_message(log_channel_id, text)
         except Exception as e:
             print(f"Failed to log action: {e}")
+            if message:
+                try:
+                    await message.reply(f"⚠️ **Log Error:** {e}\nCheck Bot Permissions in Log Channel.")
+                except:
+                    pass
+    elif message:
+        # Warn if Log Channel ID is not set but we tried to log
+        # (Optional: might be annoying if they intentionally didn't set it, but good for debugging now)
+        pass
 
 def is_admin(chat_member):
     return chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
@@ -104,9 +113,10 @@ async def whitelist_command(client, message):
             await db.add_whitelist_user(target_user.id)
             msg = await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
             asyncio.create_task(scheduled_delete(msg, delay=300))
-            await log_action(client, "User Whitelisted", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)")
+            await log_action(client, "User Whitelisted", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)", message)
         except Exception as e:
             await message.reply(f"❌ **Database Error:** {e}")
+        await message.delete()
         return
 
     # Else whitelist domain
@@ -114,9 +124,10 @@ async def whitelist_command(client, message):
         await db.add_whitelist_domain(target)
         msg = await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
-        await log_action(client, "Domain Whitelisted", f"**Admin:** {message.from_user.mention}\n**Domain:** `{target}`")
+        await log_action(client, "Domain Whitelisted", f"**Admin:** {message.from_user.mention}\n**Domain:** `{target}`", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 @app.on_message(filters.command("unlist") & filters.group)
 async def unlist_command(client, message):
@@ -143,9 +154,10 @@ async def unlist_command(client, message):
         await db.remove_whitelist_domain(target)
         msg = await message.reply(f"✅ **Domain Unlisted!**\nThe domain `{target}` has been removed from the whitelist.\nLinks containing this domain will now be deleted.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
-        await log_action(client, "Domain Unlisted", f"**Admin:** {message.from_user.mention}\n**Domain:** `{target}`")
+        await log_action(client, "Domain Unlisted", f"**Admin:** {message.from_user.mention}\n**Domain:** `{target}`", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 @app.on_message(filters.command("unlistuser") & filters.group)
 async def unlistuser_command(client, message):
@@ -170,9 +182,10 @@ async def unlistuser_command(client, message):
         await db.remove_whitelist_user(target_user.id)
         msg = await message.reply(f"✅ **User Unlisted!**\n{target_user.mention} has been removed from the whitelist.\nTheir links will now be deleted.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
-        await log_action(client, "User Unlisted", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)")
+        await log_action(client, "User Unlisted", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 @app.on_message(filters.command("unwarn") & filters.group)
 async def unwarn_command(client, message):
@@ -197,7 +210,7 @@ async def unwarn_command(client, message):
     # Reset warnings
     try:
         await db.reset_warnings(target_user.id)
-        await log_action(client, "Warnings Reset", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)")
+        await log_action(client, "Warnings Reset", f"**Admin:** {message.from_user.mention}\n**User:** {target_user.mention} (`{target_user.id}`)", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error (Reset Warnings):** {e}")
         return
@@ -223,6 +236,7 @@ async def unwarn_command(client, message):
 
     msg = await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
     asyncio.create_task(scheduled_delete(msg, delay=300))
+    await message.delete()
 
 @app.on_message(filters.command("blacklist") & filters.group)
 async def blacklist_command(client, message):
@@ -247,9 +261,10 @@ async def blacklist_command(client, message):
         await db.add_blacklist_word(word)
         msg = await message.reply(f"🚫 **Word Blacklisted!**\nThe word `{word}` has been banned.\nMessages containing this word will be auto-deleted.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
-        await log_action(client, "Word Blacklisted", f"**Admin:** {message.from_user.mention}\n**Word:** `{word}`")
+        await log_action(client, "Word Blacklisted", f"**Admin:** {message.from_user.mention}\n**Word:** `{word}`", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 @app.on_message(filters.command("unblacklist") & filters.group)
 async def unblacklist_command(client, message):
@@ -274,9 +289,10 @@ async def unblacklist_command(client, message):
         await db.remove_blacklist_word(word)
         msg = await message.reply(f"✅ **Word Unblacklisted!**\nThe word `{word}` has been unbanned.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
-        await log_action(client, "Word Unblacklisted", f"**Admin:** {message.from_user.mention}\n**Word:** `{word}`")
+        await log_action(client, "Word Unblacklisted", f"**Admin:** {message.from_user.mention}\n**Word:** `{word}`", message)
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 @app.on_message(filters.command("list") & filters.group)
 async def list_command(client, message):
@@ -324,6 +340,7 @@ async def list_command(client, message):
         
     except Exception as e:
         await message.reply(f"❌ **Database Error:** {e}")
+    await message.delete()
 
 
 
@@ -488,7 +505,7 @@ async def message_handler(client, message):
     # Log to Channel
     if log_channel_id != 0:
         log_text = f"**User:** {message.from_user.mention} (`{user_id}`)\n**Chat:** {message.chat.title}\n**Content:** {text[:1000]}"
-        await log_action(client, "Link/Spam Deleted", log_text)
+        await log_action(client, "Link/Spam Deleted", log_text, message)
 
     # Warn User (Same logic as above, could be refactored but keeping simple for now)
     warnings = await db.add_warning(user_id)
@@ -554,7 +571,7 @@ async def unmute_callback(client, callback_query):
         admin_name = callback_query.from_user.mention
         await callback_query.message.edit_text(f"✅ User unmuted by {admin_name}.\nWarnings have been reset.")
         asyncio.create_task(scheduled_delete(callback_query.message, delay=300))
-        await log_action(client, "User Unmuted", f"**Admin:** {admin_name}\n**User ID:** `{target_user_id}`")
+        await log_action(client, "User Unmuted", f"**Admin:** {admin_name}\n**User ID:** `{target_user_id}`", callback_query.message)
         
     except Exception as e:
         await callback_query.answer(f"Failed to unmute: {e}", show_alert=True)
