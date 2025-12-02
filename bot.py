@@ -34,8 +34,6 @@ def is_admin(chat_member):
 
 @app.on_message(filters.command("ping"))
 async def ping_command(client, message):
-@app.on_message(filters.command("ping"))
-async def ping_command(client, message):
     await message.reply("Pong! 🏓\nI am alive.")
 
 @app.on_message(filters.command("start") & filters.private)
