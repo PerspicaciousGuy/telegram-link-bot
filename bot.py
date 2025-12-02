@@ -188,8 +188,60 @@ async def unwarn_command(client, message):
     msg = await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
     asyncio.create_task(scheduled_delete(msg, delay=300))
 
+@app.on_message(filters.command("blacklist") & filters.group)
+async def blacklist_command(client, message):
+    # Check Admin
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
+        return
+
+    if len(message.command) < 2:
+        await message.reply("Usage: `/blacklist <word>` to ban a word.")
+        return
+
+    word = message.command[1].lower()
+    try:
+        await db.add_blacklist_word(word)
+        msg = await message.reply(f"🚫 **Word Blacklisted!**\nThe word `{word}` has been banned.\nMessages containing this word will be auto-deleted.")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
+    except Exception as e:
+        await message.reply(f"❌ **Database Error:** {e}")
+
+@app.on_message(filters.command("unblacklist") & filters.group)
+async def unblacklist_command(client, message):
+    # Check Admin
+    is_sender_admin = False
+    if not message.from_user:
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            is_sender_admin = True
+    else:
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        is_sender_admin = is_admin(member)
+
+    if not is_sender_admin:
+        return
+
+    if len(message.command) < 2:
+        await message.reply("Usage: `/unblacklist <word>` to unban a word.")
+        return
+
+    word = message.command[1].lower()
+    try:
+        await db.remove_blacklist_word(word)
+        msg = await message.reply(f"✅ **Word Unblacklisted!**\nThe word `{word}` has been unbanned.")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
+    except Exception as e:
+        await message.reply(f"❌ **Database Error:** {e}")
+
 @app.on_message(filters.group & (filters.text | filters.caption))
-async def link_handler(client, message):
+async def message_handler(client, message):
     chat_id = message.chat.id
     user_id = message.from_user.id if message.from_user else 0
     
@@ -205,10 +257,44 @@ async def link_handler(client, message):
     if await db.is_user_whitelisted(user_id):
         return
 
-    # 3. Detect Links
     text = message.text or message.caption or ""
-    entities = message.entities or message.caption_entities or []
     
+    # 3. Check Blacklist (Words)
+    blacklist = await db.get_blacklist()
+    for word in blacklist:
+        if word in text.lower():
+            try:
+                await message.delete()
+                # Warn User
+                warnings = await db.add_warning(user_id)
+                limit = 3
+                
+                if warnings >= limit:
+                    # Punish
+                    try:
+                        until_date = datetime.now() + timedelta(hours=24)
+                        await client.restrict_chat_member(
+                            chat_id, 
+                            user_id, 
+                            types.ChatPermissions(can_send_messages=False),
+                            until_date=until_date
+                        )
+                        button = types.InlineKeyboardMarkup([
+                            [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
+                        ])
+                        await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to using banned words.", reply_markup=button)
+                        await db.reset_warnings(user_id)
+                    except Exception as e:
+                        await message.reply(f"⚠️ {message.from_user.mention}, stop using banned words! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+                else:
+                    msg = await message.reply(f"⚠️ {message.from_user.mention}, that word is not allowed! (Warning {warnings}/{limit})")
+                    asyncio.create_task(scheduled_delete(msg, delay=300))
+                return # Stop processing if blacklisted word found
+            except Exception as e:
+                print(f"Failed to delete blacklisted message: {e}")
+
+    # 4. Detect Links
+    entities = message.entities or message.caption_entities or []
     has_link = False
     
     # Check regex
@@ -224,11 +310,11 @@ async def link_handler(client, message):
     if not has_link:
         return
 
-    # 4. Check Whitelist (Domain)
+    # 5. Check Whitelist (Domain)
     if await db.is_domain_whitelisted(text):
         return
 
-    # 5. Action: Delete & Warn
+    # 6. Action: Delete & Warn (Links)
     try:
         await message.delete()
     except Exception as e:
@@ -243,7 +329,7 @@ async def link_handler(client, message):
         except Exception as e:
             print(f"Failed to log: {e}")
 
-    # Warn User
+    # Warn User (Same logic as above, could be refactored but keeping simple for now)
     warnings = await db.add_warning(user_id)
     limit = 3
     

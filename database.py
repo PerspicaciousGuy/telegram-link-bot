@@ -12,7 +12,9 @@ class Database:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
         self.db = self.client["TelegramBotDB"]
         self.warnings = self.db["warnings"]
+        self.warnings = self.db["warnings"]
         self.whitelist = self.db["whitelist"]
+        self.blacklist = self.db["blacklist"]
 
     # --- Warnings ---
     async def get_warnings(self, user_id):
@@ -83,3 +85,24 @@ class Database:
         if not doc or "list" not in doc:
             return False
         return user_id in doc["list"]
+
+    # --- Blacklist ---
+    async def add_blacklist_word(self, word):
+        if self.db is None: return
+        await self.blacklist.update_one(
+            {"type": "word"}, 
+            {"$addToSet": {"list": word.lower()}}, 
+            upsert=True
+        )
+
+    async def remove_blacklist_word(self, word):
+        if self.db is None: return
+        await self.blacklist.update_one(
+            {"type": "word"}, 
+            {"$pull": {"list": word.lower()}}
+        )
+
+    async def get_blacklist(self):
+        if self.db is None: return []
+        doc = await self.blacklist.find_one({"type": "word"})
+        return doc["list"] if doc and "list" in doc else []
