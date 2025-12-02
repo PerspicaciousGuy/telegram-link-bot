@@ -309,10 +309,12 @@ async def testlog_command(client, message):
         return
 
     try:
-        sent = await client.send_message(log_channel_id, "✅ **Test Log**\nThis is a test message to verify the log channel connection.")
-        await message.reply(f"✅ **Success!**\nTest message sent to channel. Message ID: `{sent.id}`")
+        # Try to get chat info first (helps resolve/cache the peer)
+        chat = await client.get_chat(log_channel_id)
+        sent = await client.send_message(chat.id, f"✅ **Test Log**\nThis is a test message to verify the log channel connection.\n**Channel:** {chat.title}")
+        await message.reply(f"✅ **Success!**\nTest message sent to channel `{chat.title}`.\nMessage ID: `{sent.id}`")
     except Exception as e:
-        await message.reply(f"❌ **Failed to send log:**\n`{e}`\n\n**Possible fixes:**\n1. Make sure the Bot is an **Admin** in the channel.\n2. Check if the Channel ID is correct (it should start with -100).")
+        await message.reply(f"❌ **Failed to send log:**\n`{e}`\n\n**Troubleshooting (ID Mode):**\n1. **Remove** the bot from the channel.\n2. **Add** it back as Admin.\n3. **Send a message** in the channel manually.\n4. Try `/testlog` again.")
 
 @app.on_message(filters.group & (filters.text | filters.caption))
 async def message_handler(client, message):
