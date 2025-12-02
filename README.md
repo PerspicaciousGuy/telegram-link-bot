@@ -11,10 +11,11 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - **MongoDB Support**: Persist warnings and settings in the cloud.
 
 ## 🛠 Commands
-- `/start` - Check if the bot is alive and see developer info.
-- `/whitelist <domain>` - Allow a domain (e.g., `/whitelist google.com`).
-- `/whitelist` (Reply to user) - Allow a specific user to post links.
-- `/unwarn` (Reply to user) - Reset warnings for a user.
+- `/start` - (PM Only) Check if the bot is alive and see developer info.
+- `/whitelist <domain>` - (Admin Only) Allow a specific domain (e.g., `/whitelist youtube.com`).
+- `/whitelist` (Reply) - (Admin Only) Allow a specific user to post any link.
+- `/unwarn` (Reply) - (Admin Only) Reset warnings for a user **AND** automatically unmute them.
+- **Unmute Button** - (Admin Only) Click the button on the "Muted" message to instantly unmute the user.
 
 ## ⚙️ Environment Variables
 | Variable | Description | Required |
