@@ -13,7 +13,12 @@ from database import Database
 api_id = int(os.environ.get("API_ID"))
 api_hash = os.environ.get("API_HASH")
 bot_token = os.environ.get("BOT_TOKEN")
-log_channel_id = int(os.environ.get("LOG_CHANNEL_ID", 0))
+# Get Log Channel ID (try int, else keep string)
+log_channel_id = os.environ.get("LOG_CHANNEL_ID", "0")
+try:
+    log_channel_id = int(log_channel_id)
+except ValueError:
+    pass # Keep as string (e.g. @channelname)
 
 app = Client("link_remover_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 db = Database()
