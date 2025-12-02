@@ -148,6 +148,8 @@ async def whitelist_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        print(f"DEBUG: User {message.from_user.id if message.from_user else 'Anon'} tried /whitelist but is NOT admin.")
+        await message.reply("❌ **Debug:** You are not recognized as an admin.")
         return
 
     if len(message.command) < 2:
@@ -159,15 +161,21 @@ async def whitelist_command(client, message):
     # If reply, whitelist user
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
-        await db.add_whitelist_user(target_user.id)
-        msg = await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
-        asyncio.create_task(scheduled_delete(msg, delay=300))
+        try:
+            await db.add_whitelist_user(target_user.id)
+            msg = await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
+            asyncio.create_task(scheduled_delete(msg, delay=300))
+        except Exception as e:
+            await message.reply(f"❌ **Database Error:** {e}")
         return
 
     # Else whitelist domain
-    await db.add_whitelist_domain(target)
-    msg = await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
-    asyncio.create_task(scheduled_delete(msg, delay=300))
+    try:
+        await db.add_whitelist_domain(target)
+        msg = await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
+    except Exception as e:
+        await message.reply(f"❌ **Database Error:** {e}")
 
 @app.on_message(filters.command("unwarn") & filters.group)
 async def unwarn_command(client, message):
@@ -181,6 +189,8 @@ async def unwarn_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        print(f"DEBUG: User {message.from_user.id if message.from_user else 'Anon'} tried /unwarn but is NOT admin.")
+        await message.reply("❌ **Debug:** You are not recognized as an admin.")
         return
 
     if not message.reply_to_message:
@@ -190,7 +200,11 @@ async def unwarn_command(client, message):
     target_user = message.reply_to_message.from_user
     
     # Reset warnings
-    await db.reset_warnings(target_user.id)
+    try:
+        await db.reset_warnings(target_user.id)
+    except Exception as e:
+        await message.reply(f"❌ **Database Error (Reset Warnings):** {e}")
+        return
     
     # Also Unmute to ensure they can chat
     try:
