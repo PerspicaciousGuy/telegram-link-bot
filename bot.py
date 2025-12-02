@@ -111,7 +111,13 @@ async def link_handler(client, message):
                 types.ChatPermissions(can_send_messages=False),
                 until_date=until_date
             )
-            await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.")
+            
+            # Unmute Button
+            button = types.InlineKeyboardMarkup([
+                [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
+            ])
+            
+            await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
             await db.reset_warnings(user_id)
         except Exception as e:
             await message.reply(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
@@ -162,6 +168,44 @@ async def unwarn_command(client, message):
     target_user = message.reply_to_message.from_user.id
     await db.reset_warnings(target_user)
     await message.reply(f"Warnings reset for {message.reply_to_message.from_user.mention}.")
+
+@app.on_callback_query(filters.regex(r"^unmute_"))
+async def unmute_callback(client, callback_query):
+    # Check Admin
+    member = await client.get_chat_member(callback_query.message.chat.id, callback_query.from_user.id)
+    if not is_admin(member):
+        await callback_query.answer("❌ Only admins can unmute!", show_alert=True)
+        return
+
+    target_user_id = int(callback_query.data.split("_")[1])
+    chat_id = callback_query.message.chat.id
+
+    try:
+        # Unmute User (Give back default permissions)
+        await client.restrict_chat_member(
+            chat_id,
+            target_user_id,
+            types.ChatPermissions(
+                can_send_messages=True,
+                can_send_media_messages=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_send_polls=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False
+            )
+        )
+        
+        # Reset Warnings
+        await db.reset_warnings(target_user_id)
+        
+        # Update Message
+        admin_name = callback_query.from_user.mention
+        await callback_query.message.edit_text(f"✅ User unmuted by {admin_name}.\nWarnings have been reset.")
+        
+    except Exception as e:
+        await callback_query.answer(f"Failed to unmute: {e}", show_alert=True)
 
 # Dummy HTTP server to satisfy Koyeb Web Service health check
 class Handler(BaseHTTPRequestHandler):
