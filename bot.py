@@ -56,89 +56,7 @@ async def start_command(client, message):
     ])
     await message.reply(text, reply_markup=buttons, disable_web_page_preview=True)
 
-@app.on_message(filters.group & (filters.text | filters.caption))
-async def link_handler(client, message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id if message.from_user else 0
-    
-    # 1. Check if user is Admin/Owner (Immune)
-    try:
-        member = await client.get_chat_member(chat_id, user_id)
-        if is_admin(member):
-            return
-    except Exception:
-        pass # Failed to get member, proceed with caution or return
 
-    # 2. Check Whitelist (User)
-    if await db.is_user_whitelisted(user_id):
-        return
-
-    # 3. Detect Links
-    text = message.text or message.caption or ""
-    entities = message.entities or message.caption_entities or []
-    
-    has_link = False
-    
-    # Check regex
-    if url_pattern.search(text):
-        has_link = True
-    
-    # Check entities (Text Links)
-    for entity in entities:
-        if entity.type in [enums.MessageEntityType.URL, enums.MessageEntityType.TEXT_LINK]:
-            has_link = True
-            break
-
-    if not has_link:
-        return
-
-    # 4. Check Whitelist (Domain)
-    if await db.is_domain_whitelisted(text):
-        return
-
-    # 5. Action: Delete & Warn
-    try:
-        await message.delete()
-    except Exception as e:
-        print(f"Failed to delete message: {e}")
-        return # If can't delete, maybe can't warn either
-
-    # Log to Channel
-    if log_channel_id != 0:
-        try:
-            log_text = f"**Link Deleted**\n**User:** {message.from_user.mention} (`{user_id}`)\n**Chat:** {message.chat.title}\n**Content:** {text[:1000]}"
-            await client.send_message(log_channel_id, log_text)
-        except Exception as e:
-            print(f"Failed to log: {e}")
-
-    # Warn User
-    warnings = await db.add_warning(user_id)
-    limit = 3
-    
-    if warnings >= limit:
-        # Punish
-        try:
-            # Mute for 24 hours
-            until_date = datetime.now() + timedelta(hours=24)
-            await client.restrict_chat_member(
-                chat_id, 
-                user_id, 
-                types.ChatPermissions(can_send_messages=False),
-                until_date=until_date
-            )
-            
-            # Unmute Button
-            button = types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
-            ])
-            
-            await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
-            await db.reset_warnings(user_id)
-        except Exception as e:
-            await message.reply(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
-    else:
-        msg = await message.reply(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
-        asyncio.create_task(scheduled_delete(msg, delay=300))
 
 # --- Admin Commands ---
 
@@ -242,6 +160,90 @@ async def unwarn_command(client, message):
 
     msg = await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
     asyncio.create_task(scheduled_delete(msg, delay=300))
+
+@app.on_message(filters.group & (filters.text | filters.caption))
+async def link_handler(client, message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id if message.from_user else 0
+    
+    # 1. Check if user is Admin/Owner (Immune)
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+        if is_admin(member):
+            return
+    except Exception:
+        pass # Failed to get member, proceed with caution or return
+
+    # 2. Check Whitelist (User)
+    if await db.is_user_whitelisted(user_id):
+        return
+
+    # 3. Detect Links
+    text = message.text or message.caption or ""
+    entities = message.entities or message.caption_entities or []
+    
+    has_link = False
+    
+    # Check regex
+    if url_pattern.search(text):
+        has_link = True
+    
+    # Check entities (Text Links)
+    for entity in entities:
+        if entity.type in [enums.MessageEntityType.URL, enums.MessageEntityType.TEXT_LINK]:
+            has_link = True
+            break
+
+    if not has_link:
+        return
+
+    # 4. Check Whitelist (Domain)
+    if await db.is_domain_whitelisted(text):
+        return
+
+    # 5. Action: Delete & Warn
+    try:
+        await message.delete()
+    except Exception as e:
+        print(f"Failed to delete message: {e}")
+        return # If can't delete, maybe can't warn either
+
+    # Log to Channel
+    if log_channel_id != 0:
+        try:
+            log_text = f"**Link Deleted**\n**User:** {message.from_user.mention} (`{user_id}`)\n**Chat:** {message.chat.title}\n**Content:** {text[:1000]}"
+            await client.send_message(log_channel_id, log_text)
+        except Exception as e:
+            print(f"Failed to log: {e}")
+
+    # Warn User
+    warnings = await db.add_warning(user_id)
+    limit = 3
+    
+    if warnings >= limit:
+        # Punish
+        try:
+            # Mute for 24 hours
+            until_date = datetime.now() + timedelta(hours=24)
+            await client.restrict_chat_member(
+                chat_id, 
+                user_id, 
+                types.ChatPermissions(can_send_messages=False),
+                until_date=until_date
+            )
+            
+            # Unmute Button
+            button = types.InlineKeyboardMarkup([
+                [types.InlineKeyboardButton("🔓 Unmute (Admin Only)", callback_data=f"unmute_{user_id}")]
+            ])
+            
+            await message.reply(f"🚫 {message.from_user.mention} has been muted for 24h due to excessive links.", reply_markup=button)
+            await db.reset_warnings(user_id)
+        except Exception as e:
+            await message.reply(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
+    else:
+        msg = await message.reply(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
 
 @app.on_callback_query(filters.regex(r"^unmute_"))
 async def unmute_callback(client, callback_query):
