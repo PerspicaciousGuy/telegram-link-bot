@@ -108,6 +108,7 @@ async def whitelist_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if len(message.command) < 2:
@@ -151,6 +152,7 @@ async def unlist_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if len(message.command) < 2:
@@ -181,6 +183,7 @@ async def unlistuser_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if not message.reply_to_message:
@@ -209,6 +212,7 @@ async def unwarn_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if not message.reply_to_message:
@@ -260,6 +264,7 @@ async def blacklist_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if len(message.command) < 2:
@@ -288,6 +293,7 @@ async def unblacklist_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     if len(message.command) < 2:
@@ -316,6 +322,7 @@ async def list_command(client, message):
         is_sender_admin = is_admin(member)
 
     if not is_sender_admin:
+        await message.delete()
         return
 
     try:
