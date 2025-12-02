@@ -14,6 +14,7 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - **Max Mentions Limit**: Auto-deletes messages with more than 5 mentions to prevent mass tagging.
 - **Anonymous Admin Support**: Works perfectly with "Group Manager" (Anonymous Admins).
 - **MongoDB Support**: Persist warnings, whitelist, and blacklist in the cloud.
+- **Translation**: Translate any message to English using Google Translate.
 
 ## 🛠 Commands
 - `/start` - (PM Only) Check if the bot is alive and see developer info.
@@ -25,6 +26,7 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - `/unblacklist <word>` - (Admin Only) Unban a word.
 - `/list` - (Admin Only) View all whitelisted domains/users and blacklisted words.
 - `/unwarn` (Reply) - (Admin Only) Reset warnings for a user **AND** automatically unmute them.
+- `/tr` (Reply) - Translate the replied message to English.
 - **Unmute Button** - (Admin Only) Click the button on the "Muted" message to instantly unmute the user.
 
 ## ⚙️ Environment Variables
