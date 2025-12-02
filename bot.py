@@ -1,10 +1,12 @@
 import os
 import re
 import asyncio
+from datetime import datetime, timedelta
 from pyrogram import Client, filters, types, enums
 from threading import Thread
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from database import Database
+
 
 # Telegram bot credentials
 api_id = int(os.environ.get("API_ID"))
@@ -102,7 +104,7 @@ async def link_handler(client, message):
         # Punish
         try:
             # Mute for 24 hours
-            until_date = asyncio.get_event_loop().time() + 86400
+            until_date = datetime.now() + timedelta(hours=24)
             await client.restrict_chat_member(
                 chat_id, 
                 user_id, 
