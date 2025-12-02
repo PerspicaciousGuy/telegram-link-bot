@@ -63,5 +63,9 @@ A powerful Telegram bot to automatically delete links in your groups. It support
     python bot.py
     ```
 
+## 🐛 Known Issues
+- **Log Channel Bug**: Sometimes the bot stops sending updates to the log channel.
+    - **Workaround**: Remove the bot from the log channel and add it back again. This usually fixes the permission/cache issue.
+
 ## 👨‍💻 Developer
 Built by [Justinixx](https://t.me/justinixx).
