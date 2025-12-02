@@ -10,6 +10,8 @@ A powerful Telegram bot to automatically delete links in your groups. It support
 - **Admin Commands**: Manage whitelist and warnings easily.
 - **Keyword Blacklist**: Automatically delete messages containing banned words.
 - **Auto-Delete**: Bot messages (warnings, confirmations) auto-delete after 5 minutes to keep chat clean.
+- **Smart Mention Filter**: Blocks mentions of external channels/users (spam) while allowing group members.
+- **Max Mentions Limit**: Auto-deletes messages with more than 5 mentions to prevent mass tagging.
 - **Anonymous Admin Support**: Works perfectly with "Group Manager" (Anonymous Admins).
 - **MongoDB Support**: Persist warnings, whitelist, and blacklist in the cloud.
 
