@@ -1,5 +1,5 @@
 import os
-print("SYSTEM: Bot script started execution...")
+import os
 import re
 import asyncio
 from datetime import datetime, timedelta
@@ -34,7 +34,8 @@ def is_admin(chat_member):
 
 @app.on_message(filters.command("ping"))
 async def ping_command(client, message):
-    print(f"DEBUG: Ping received from {message.chat.id}")
+@app.on_message(filters.command("ping"))
+async def ping_command(client, message):
     await message.reply("Pong! 🏓\nI am alive.")
 
 @app.on_message(filters.command("start") & filters.private)
@@ -62,7 +63,6 @@ async def start_command(client, message):
 
 @app.on_message(filters.command("whitelist") & filters.group)
 async def whitelist_command(client, message):
-    print("DEBUG: Whitelist command triggered")
     # Check Admin (Handle Anonymous Admin)
     is_sender_admin = False
     if not message.from_user:
@@ -72,11 +72,7 @@ async def whitelist_command(client, message):
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
         is_sender_admin = is_admin(member)
 
-    print(f"DEBUG: Admin check result: {is_sender_admin}")
-
     if not is_sender_admin:
-        print(f"DEBUG: User {message.from_user.id if message.from_user else 'Anon'} tried /whitelist but is NOT admin.")
-        await message.reply("❌ **Debug:** You are not recognized as an admin.")
         return
 
     if len(message.command) < 2:
@@ -84,7 +80,6 @@ async def whitelist_command(client, message):
         return
 
     target = message.command[1]
-    print(f"DEBUG: Target: {target}")
     
     # If reply, whitelist user
     if message.reply_to_message:
@@ -99,13 +94,10 @@ async def whitelist_command(client, message):
 
     # Else whitelist domain
     try:
-        print("DEBUG: Attempting to add domain to DB...")
         await db.add_whitelist_domain(target)
-        print("DEBUG: DB add success. Sending reply...")
         msg = await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
         asyncio.create_task(scheduled_delete(msg, delay=300))
     except Exception as e:
-        print(f"DEBUG: Error occurred: {e}")
         await message.reply(f"❌ **Database Error:** {e}")
 
 @app.on_message(filters.command("unwarn") & filters.group)
@@ -119,11 +111,7 @@ async def unwarn_command(client, message):
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
         is_sender_admin = is_admin(member)
 
-    print(f"DEBUG: Admin check result: {is_sender_admin}")
-
     if not is_sender_admin:
-        print(f"DEBUG: User {message.from_user.id if message.from_user else 'Anon'} tried /unwarn but is NOT admin.")
-        await message.reply("❌ **Debug:** You are not recognized as an admin.")
         return
 
     if not message.reply_to_message:
