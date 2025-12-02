@@ -20,11 +20,20 @@ db = Database()
 # Regex pattern for links
 url_pattern = re.compile(r"(https?://\S+|www\.\S+)")
 
+# Helper for auto-deleting messages
+async def scheduled_delete(message, delay=300):
+    await asyncio.sleep(delay)
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
 def is_admin(chat_member):
     return chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
+
     text = (
         "👋 **Hello! I am the Link Remover Bot.**\n\n"
         "I help keep your group clean by automatically deleting links sent by non-admins.\n\n"
@@ -123,12 +132,7 @@ async def link_handler(client, message):
             await message.reply(f"⚠️ {message.from_user.mention}, stop sending links! (Warning {warnings}/{limit})\nI tried to mute you but failed: {e}")
     else:
         msg = await message.reply(f"⚠️ {message.from_user.mention}, links are not allowed! (Warning {warnings}/{limit})")
-        # Delete warning after a few seconds to keep chat clean
-        await asyncio.sleep(10)
-        try:
-            await msg.delete()
-        except:
-            pass
+        asyncio.create_task(scheduled_delete(msg, delay=300))
 
 # --- Admin Commands ---
 
@@ -148,12 +152,14 @@ async def whitelist_command(client, message):
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
         await db.add_whitelist_user(target_user.id)
-        await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
+        msg = await message.reply(f"✅ **User Whitelisted!**\n{target_user.mention} has been added to the database.\nThey can now send links without being restricted.")
+        asyncio.create_task(scheduled_delete(msg, delay=300))
         return
 
     # Else whitelist domain
     await db.add_whitelist_domain(target)
-    await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
+    msg = await message.reply(f"✅ **Domain Whitelisted!**\nThe domain `{target}` has been added to the database.\nLinks containing this domain will now be ignored by the bot.")
+    asyncio.create_task(scheduled_delete(msg, delay=300))
 
 @app.on_message(filters.command("unwarn") & filters.group)
 async def unwarn_command(client, message):
@@ -189,7 +195,8 @@ async def unwarn_command(client, message):
     except Exception:
         pass # If fails (e.g. user not muted), just ignore
 
-    await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
+    msg = await message.reply(f"✅ **Warnings Reset!**\nWarnings for {target_user.mention} have been cleared.\nThey have been unmuted and can now send messages again.")
+    asyncio.create_task(scheduled_delete(msg, delay=300))
 
 @app.on_callback_query(filters.regex(r"^unmute_"))
 async def unmute_callback(client, callback_query):
@@ -225,6 +232,7 @@ async def unmute_callback(client, callback_query):
         # Update Message
         admin_name = callback_query.from_user.mention
         await callback_query.message.edit_text(f"✅ User unmuted by {admin_name}.\nWarnings have been reset.")
+        asyncio.create_task(scheduled_delete(callback_query.message, delay=300))
         
     except Exception as e:
         await callback_query.answer(f"Failed to unmute: {e}", show_alert=True)
